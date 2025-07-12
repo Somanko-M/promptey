@@ -26,9 +26,13 @@ const app = express();
 // ✅ Enable CORS
 app.use(
   cors({
-    origin: "*", // 🔒 Replace with frontend domain in production
+    origin: "https://prompteyv2.netlify.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
+
 
 // ✅ Parse JSON requests
 app.use(express.json());
@@ -84,4 +88,5 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+
 });

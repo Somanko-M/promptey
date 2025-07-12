@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       "/api": {
-        target: "http://localhost:5000", // ✅ Your backend server
+        target: "https://prompteyv2.onrender.com", // ✅ Your backend server
         changeOrigin: true,
         secure: false,
       },

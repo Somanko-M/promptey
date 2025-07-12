@@ -3,3 +3,5 @@ node_modules
 dist
 .env
 firebase/serviceAccountKey.json
+# Local Netlify folder
+.netlify

@@ -28,7 +28,7 @@ const PromptBuilder = () => {
   const navigate = useNavigate();
   const projectId = searchParams.get("id");
   const previewRef = useRef<HTMLIFrameElement>(null);
-
+  const BACKEND_URL = import.meta.env.VITE_API_URL;
   const [userId, setUserId] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [prompt, setPrompt] = useState("");
@@ -43,6 +43,14 @@ const PromptBuilder = () => {
   const [dailyLimit, setDailyLimit] = useState(Infinity);
   const [promptsUsed, setPromptsUsed] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  if (chatRef.current) {
+    chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  }
+}, [messages]);
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -121,11 +129,12 @@ const PromptBuilder = () => {
   }, 120000); // 2 minutes
 
   try {
-    const res = await fetch("http://localhost:5000/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, userId, projectId }),
-    });
+    const res = await fetch(`${BACKEND_URL}/api/generate`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ prompt, userId, projectId }),
+});
+
 
     clearTimeout(waitMsgTimeout);
 
@@ -310,7 +319,7 @@ const PromptBuilder = () => {
     }
 
     window.open(
-      `http://localhost:5000/api/download?userId=${userId}&projectId=${projectId}`,
+      `https://prompteyv2.onrender.com/api/download?userId=${userId}&projectId=${projectId}`,
       "_blank"
     );
   };
@@ -354,64 +363,68 @@ const PromptBuilder = () => {
         {/* 👈 Left Side - Chat UI */}
         <div className="flex flex-col space-y-4">
           <Card className="flex flex-col flex-1 bg-white/5 backdrop-blur border border-border/30 shadow-xl rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-xl text-white font-semibold">
-                Chat with the Builder
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col overflow-hidden space-y-3 max-h-[600px]">
-              {/* 💬 Chat Messages */}
-              <div className="overflow-y-auto max-h-[350px] space-y-3 p-3 rounded-lg bg-background border border-border/30 custom-scroll">
-                {messages.length === 0 && (
-                  <div className="text-muted-foreground text-sm text-center">
-                    Start by describing your website...
-                  </div>
-                )}
-                {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`p-3 rounded-lg whitespace-pre-line ${
-                      msg.role === "user"
-                        ? "bg-sky-700 text-white text-right ml-auto max-w-[80%]"
-                        : msg.role === "ai"
-                        ? "bg-muted test-foreground mr-auto max-w-[80%]"
-                        : "bg-gray-800 text-gray-300"
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                ))}
-                <div ref={bottomRef} />
-              </div>
+  <CardHeader>
+    <CardTitle className="text-xl text-white font-semibold">
+      Chat with the Builder
+    </CardTitle>
+  </CardHeader>
 
-              {/* ✍️ Prompt Input */}
-              <Textarea
-                placeholder="e.g. Add an animated testimonial section with client photos"
-                className="rounded-xl text-white bg-background border border-border/30"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-              />
+  <CardContent className="flex flex-col overflow-hidden space-y-3 max-h-[600px]">
+    {/* 💬 Chat Messages */}
+    <div
+      ref={chatRef}
+      className="overflow-y-auto max-h-[350px] space-y-3 p-3 rounded-lg bg-background border border-border/30 custom-scroll"
+    >
+      {messages.length === 0 && (
+        <div className="text-muted-foreground text-sm text-center">
+          Start by describing your website...
+        </div>
+      )}
+      {messages.map((msg, i) => (
+        <div
+          key={i}
+          className={`p-3 rounded-lg whitespace-pre-line ${
+            msg.role === "user"
+              ? "bg-sky-700 text-white text-right ml-auto max-w-[80%]"
+              : msg.role === "ai"
+              ? "bg-gray-100 text-black mr-auto max-w-[80%]"
+              : "bg-gray-800 text-gray-300"
+          }`}
+        >
+          {msg.content}
+        </div>
+      ))}
+    </div>
 
-              {/* 🔘 Buttons */}
-              <div className="flex flex-col space-y-2">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!prompt || isGenerating}
-                  className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  {isGenerating ? "Generating..." : "Send Prompt & Generate"}
-                </Button>
+    {/* ✍️ Prompt Input */}
+    <Textarea
+      placeholder="e.g. Add an animated testimonial section with client photos"
+      className="rounded-xl text-white bg-background border border-border/30"
+      value={prompt}
+      onChange={(e) => setPrompt(e.target.value)}
+      rows={4}
+    />
 
-                <Button
-                  onClick={handleOpenFullPreview}
-                  className="w-full rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 text-white font-semibold shadow-md hover:shadow-lg"
-                >
-                  🔍 Open Full View
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+    {/* 🔘 Buttons */}
+    <div className="flex flex-col space-y-2">
+      <Button
+        onClick={handleGenerate}
+        disabled={!prompt || isGenerating}
+        className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+      >
+        {isGenerating ? "Generating..." : "Send Prompt & Generate"}
+      </Button>
+
+      <Button
+        onClick={handleOpenFullPreview}
+        className="w-full rounded-xl bg-gradient-to-r from-slate-600 to-slate-800 text-white font-semibold shadow-md hover:shadow-lg"
+      >
+        🔍 Open Full View
+      </Button>
+    </div>
+  </CardContent>
+</Card>
+
 
           {/* 📊 Prompt Usage */}
           {userPlan !== "premium" && (
