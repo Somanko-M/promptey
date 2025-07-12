@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",                      // ✅ Keep CommonJS
+    "rootDir": "./",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,                  // ✅ Required for default import from JSON
+    "resolveJsonModule": true,               // ✅ Allows importing JSON
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["./node_modules/@types"],
+    "baseUrl": ".",                           // ✅ Enables absolute imports
+    "paths": {
+      "@/*": ["./*"]                          // ✅ Alias: @/firebase/admin → ./firebase/admin
+    }
+  },
+  "include": ["index.ts", "routes/**/*.ts", "firebase/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
