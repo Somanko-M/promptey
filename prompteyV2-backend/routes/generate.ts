@@ -1,11 +1,7 @@
 import { Router, Request, Response } from "express";
 import axios from "axios";
 import { initializeApp, cert, getApps, ServiceAccount } from "firebase-admin/app";
-import {
-  getFirestore,
-  FieldValue,
-  Timestamp,
-} from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import serviceAccount from "../firebase/serviceAccountKey.json";
 
 const router = Router();
@@ -16,10 +12,9 @@ if (!getApps().length) {
 const db = getFirestore();
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
-const QWEN_MODEL = "qwen/qwq-32b:free";
+const QWEN_MODEL = "qwen/qwen-plus:free";
 const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324:free";
 
-// 📌 Insert before footer or </body>
 function insertBeforeFooter(existingHtml: string, patchHtml: string): string {
   const footerMatch = existingHtml.match(/<footer[\s\S]*?<\/footer>/i);
   if (footerMatch && footerMatch.index !== undefined) {
@@ -37,7 +32,6 @@ function insertBeforeFooter(existingHtml: string, patchHtml: string): string {
   }
   return existingHtml + "\n" + patchHtml;
 }
-
 router.post("/", async (req: Request, res: Response) => {
   const { prompt, userId, projectId } = req.body;
 
@@ -90,7 +84,6 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
 
-    // 🧠 Enhance prompt using Qwen
     let enhancedPrompt = prompt;
     try {
       const enhancedResponse = await axios.post(
@@ -100,7 +93,7 @@ router.post("/", async (req: Request, res: Response) => {
           messages: [
             {
               role: "system",
-              content: `You are an expert website strategist. Rewrite vague user prompts clearly. Detect intent and industry. Don't explain.`,
+              content: `You are an expert website  strategist. Clarify and enrich vague prompts into detailed creative briefs , make sure the prompt entered by the user is understood and then acted upon. Never assume a rigid layout type. Focus on intent and usability.`,
             },
             { role: "user", content: prompt },
           ],
@@ -112,26 +105,19 @@ router.post("/", async (req: Request, res: Response) => {
           },
         }
       );
-      const possible = enhancedResponse.data.choices?.[0]?.message?.content?.trim();
-      if (possible) enhancedPrompt = possible;
+
+      const maybe = enhancedResponse.data.choices?.[0]?.message?.content?.trim();
+      if (maybe && !maybe.includes("<html") && !maybe.includes("<script")) {
+        enhancedPrompt = maybe;
+      }
+
       enhancedPrompt = enhancedPrompt
         .replace(/```[\s\S]*?```/g, "")
         .replace(/<\/?[^>]+>/g, "")
         .trim();
-
-      await projectRef.update({
-        status: {
-          chat: FieldValue.arrayUnion({
-            role: "assistant",
-            content: `✅ Enhanced Prompt:\n${enhancedPrompt}`,
-            ts: Date.now(),
-          }),
-        },
-      });
     } catch (e) {
       console.warn("⚠️ Qwen enhancement failed.");
     }
-
     await projectRef.update({
       status: {
         chat: FieldValue.arrayUnion({
@@ -142,31 +128,31 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
 
-    // 🔧 Choose correct system prompt
     let systemPrompt = "";
 
     if (existingPages?.html || existingPages?.css || existingPages?.js) {
       systemPrompt = `
-You are an expert frontend developer.
+You are an expert frontend developer working on an existing website. You are given the current HTML, CSS, and JavaScript.
 
-You are given an existing website with its HTML, CSS, and JavaScript.
+Your task is to update the website based on the user’s latest request.
 
-Your task is to update the website based on the user's new request.
+🛠️ IMPORTANT:
+- Modify ONLY what is required. Do NOT return full layout or repeat existing code.
+- If the user says "remove", remove that section.
+- If the user says "add", clearly insert the new section.
+- ⚠️ If your changes involve interactivity (JS), make sure it doesn’t break existing features.
+- Do NOT re-declare variables, duplicate classes or IDs.
 
-If you remove any section with interactive logic, include updated JS that avoids breaking the website. Return empty <script> if none is needed.
+💡 Image Rules:
+- All <img> tags MUST use direct Unsplash image URLs: https://images.unsplash.com/...
+- ❌ Never use placeholder names like "image.jpg", "assets/banner.png", or relative paths.
 
-🔧 Instructions:
-- Modify only the parts needed — DO NOT repeat the full layout, footer, header, or other existing sections.
-- If the user says "remove", remove it. If they say "add", insert the new section clearly.
-- DO NOT re-declare variables or duplicate classes/IDs.
-- DO NOT include explanations — only return code.
-
-🧾 Output Format:
-- Return ONLY the modified or newly added code.
-- Wrap updated HTML in <body> or <section>
-- Wrap updated CSS in <style>
-- Wrap updated JS in <script>
-- If no changes are needed, return an empty string.
+📦 Return Format:
+- Updated HTML wrapped inside <body> or <section> only
+- Updated CSS wrapped in <style>
+- Updated JS wrapped in <script>
+- ⚠️ Do NOT include explanations.
+- If no change is needed, return an empty string.
 
 📄 Existing HTML:
 ${existingPages.html}
@@ -177,9 +163,10 @@ ${existingPages.css}
 🧠 Existing JS:
 ${existingPages.js}
 
-🗣️ User Request:
+🗣️ User’s Follow-Up Prompt:
 ${enhancedPrompt}
-      `.trim();
+`.trim();
+
     } else {
       systemPrompt = `
 You are a professional web developer. Create a fully structured, modern, and responsive website using HTML, CSS, and JavaScript.
@@ -203,8 +190,8 @@ Do not explain. Only return:
 - HTML (inside full <html> tag)
 - CSS (inside <style>)
 - JS (inside <script>)
-`.trim();
-
+User Prompt:
+${enhancedPrompt}`.trim();
     }
 
     const deepSeekResponse = await axios.post(
@@ -234,14 +221,12 @@ Do not explain. Only return:
     js = js.replace(/<\/?script[^>]*>/gi, "").trim();
 
     if (!js || js.length < 20 || js.includes("})(); } catch(e)") || !/[a-zA-Z0-9]/.test(js)) {
-      console.warn("⚠️ DeepSeek returned broken JS, skipping injection.");
       js = "";
     }
 
     if (existingPages?.html && html.startsWith("<section")) {
       html = insertBeforeFooter(existingPages.html, html);
     }
-
     let backend_code = "";
     try {
       const backendRes = await axios.post(
@@ -251,7 +236,7 @@ Do not explain. Only return:
           messages: [
             {
               role: "system",
-              content: `You're a full-stack developer.\nIf the user request requires backend functionality (e.g. form submission, database), generate Express.js backend code.\nIf NOT needed, return "NO_BACKEND".`,
+              content: `You’re a backend developer. If user needs dynamic logic (e.g. chat, form, database), return Express.js API routes. Otherwise, return "NO_BACKEND".`,
             },
             { role: "user", content: enhancedPrompt },
           ],
@@ -263,12 +248,12 @@ Do not explain. Only return:
           },
         }
       );
-      const backendCandidate = backendRes.data.choices?.[0]?.message?.content?.trim();
-      if (backendCandidate && !backendCandidate.includes("NO_BACKEND")) {
-        backend_code = backendCandidate;
+      const maybeBackend = backendRes.data.choices?.[0]?.message?.content?.trim();
+      if (maybeBackend && !maybeBackend.includes("NO_BACKEND")) {
+        backend_code = maybeBackend;
       }
-    } catch (e) {
-      console.warn("⚠️ Qwen backend check skipped.");
+    } catch (err) {
+      console.warn("⚠️ Backend generation skipped.");
     }
 
     if (!html && !css && !js) {
@@ -315,11 +300,6 @@ Do not explain. Only return:
     });
   } catch (err: any) {
     console.error("🔥 Generation error:", err);
-    if (err.response?.status === 429) {
-      return res.status(429).json({
-        error: "🚧 Our servers are in maintenance mode. Please come back after 12:00 AM IST.",
-      });
-    }
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
