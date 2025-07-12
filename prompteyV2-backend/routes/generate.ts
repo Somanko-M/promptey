@@ -93,7 +93,8 @@ router.post("/", async (req: Request, res: Response) => {
           messages: [
             {
               role: "system",
-              content: `You are an expert website  strategist. Clarify and enrich vague prompts into detailed creative briefs , make sure the prompt entered by the user is understood and then acted upon. Never assume a rigid layout type. Focus on intent and usability.`,
+              content: `You are an expert website  strategist. Clarify and enrich vague prompts into detailed creative briefs , make sure the prompt entered by the user is understood and then acted upon. Never assume a rigid layout type. Focus on intent and usability.Make sure the section you add includes real data (not just headings). Use Unsplash images and realistic text. Do not leave sections empty or incomplete. The user expects functional, visual results.
+`,
             },
             { role: "user", content: prompt },
           ],
