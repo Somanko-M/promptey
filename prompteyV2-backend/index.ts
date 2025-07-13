@@ -32,6 +32,8 @@ app.use(
     credentials: true,
   })
 );
+// ✅ Allow preflight requests from Netlify
+app.options("*", cors());
 
 
 // ✅ Parse JSON requests
