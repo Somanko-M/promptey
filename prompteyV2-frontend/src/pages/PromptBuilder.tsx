@@ -239,7 +239,7 @@ useEffect(() => {
         </style>
       </head>
       <body>
-        ${html || "<div style='padding:2rem;color:red'>⚠️ No HTML content</div>"}
+        ${html || ""}
         ${scriptBlock}
         ${fallbackImageFix}
       </body>

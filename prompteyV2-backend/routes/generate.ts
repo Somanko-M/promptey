@@ -225,9 +225,12 @@ ${enhancedPrompt}`.trim();
       js = "";
     }
 
-    if (existingPages?.html && html.startsWith("<section")) {
-      html = insertBeforeFooter(existingPages.html, html);
-    }
+    if (existingPages?.html && html?.startsWith("<section")) {
+  html = insertBeforeFooter(existingPages.html, html);
+} else if (!html && existingPages?.html) {
+  html = existingPages.html;
+}
+
     let backend_code = "";
     try {
       const backendRes = await axios.post(
@@ -258,14 +261,15 @@ ${enhancedPrompt}`.trim();
     }
 
     if (!html && !css && !js) {
-      return res.status(200).json({
-        message: "No valid content generated",
-        html: "",
-        css: "",
-        js: "",
-        enhanced_prompt: enhancedPrompt,
-      });
-    }
+  return res.status(200).json({
+    message: "⚠️ AI returned no usable code. Try rephrasing your prompt.",
+    html: "",
+    css: "",
+    js: "",
+    enhanced_prompt: enhancedPrompt,
+  });
+}
+
 
     await projectRef.set(
       {
